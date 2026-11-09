@@ -49,6 +49,12 @@ async function run(file,approval){
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
  const page=await browser.newPage();let attempted=false;
  try{
+  const expected=JSON.parse(fs.readFileSync(path.join(base,'application.json'),'utf8'));
+  const api=await page.goto('https://boards-api.greenhouse.io/v1/boards/hootsuite/jobs/8359647',{waitUntil:'domcontentloaded',timeout:30000});
+  if(!api||api.status()!==200)throw Error('Employer API cannot confirm the current posting');
+  const current=JSON.parse(await page.locator('body').innerText());
+  const description=current.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+  if(hash(description)!==expected.job_snapshot.content_hash)throw Error('Posting changed after review; regenerate and approve the updated application');
   await page.goto(manifest.job_url,{waitUntil:'networkidle',timeout:45000});
   if(await page.getByRole('heading',{name:'Junior Software Developer',exact:true}).count()===0)throw Error('Posting title/liveness needs review');
   await fillReviewedForm(page,manifest,base);
