@@ -10,7 +10,7 @@ Free, GitHub-hosted job discovery and review dashboard, configured for Java/back
 - Transparent keyword ranking from `profile.json` (not AI or an eligibility assessment).
 - Search, location filter, fit threshold, browser-local saved/reviewed statuses.
 - Resume text can be pasted locally and exported with an editable, deliberately conservative cover-letter draft. Resume text is not uploaded or persisted by the app.
-- GitHub Pages dashboard from the `main` branch `/docs` folder.
+- GitHub Pages dashboard from the `main` branch root (a root entry page also supports `/docs`).
 
 ## Boundaries
 

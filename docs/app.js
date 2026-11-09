@@ -1,4 +1,5 @@
 'use strict';
+const assetBase=new URL('.',document.currentScript.src);
 const $=id=>document.getElementById(id);
 let data={jobs:[]}, onlySaved=false, current=null, state={};
 try {state=JSON.parse(localStorage.getItem('job-getter-status')||'{}');if(!state||typeof state!=='object'||Array.isArray(state))state={};}catch{}
@@ -34,4 +35,4 @@ $('export').onclick=async()=>{
 };
 for(const id of ['query','location','threshold'])$(id).addEventListener('input',render);
 $('allNav').onclick=()=>{onlySaved=false;render();};$('savedNav').onclick=()=>{onlySaved=true;render();};
-(async()=>{try{const response=await fetch('data/jobs.json',{cache:'no-cache'});if(!response.ok)throw Error(`HTTP ${response.status}`);data=await response.json();$('total').textContent=data.jobs.length;$('updated').textContent=new Date(data.updated_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});$('feedStatus').textContent=`${data.sources_ok.length} feeds refreshed${data.errors.length?` · ${data.errors.length} source errors; stale records labeled`:''}. Scheduled refresh daily; GitHub may delay scheduled runs.`;render();}catch(error){$('updated').textContent='Unavailable';$('feedStatus').textContent='Could not load job listings. Please reload or check the refresh workflow.';$('jobs').append(el('div','empty','The feed is unavailable. Your saved decisions remain in your browser.'));}})();
+(async()=>{try{const response=await fetch(new URL('data/jobs.json',assetBase),{cache:'no-cache'});if(!response.ok)throw Error(`HTTP ${response.status}`);data=await response.json();$('total').textContent=data.jobs.length;$('updated').textContent=new Date(data.updated_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});$('feedStatus').textContent=`${data.sources_ok.length} feeds refreshed${data.errors.length?` · ${data.errors.length} source errors; stale records labeled`:''}. Scheduled refresh daily; GitHub may delay scheduled runs.`;render();}catch(error){$('updated').textContent='Unavailable';$('feedStatus').textContent='Could not load job listings. Please reload or check the refresh workflow.';$('jobs').append(el('div','empty','The feed is unavailable. Your saved decisions remain in your browser.'));}})();
