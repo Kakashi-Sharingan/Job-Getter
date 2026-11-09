@@ -33,3 +33,17 @@ Open http://localhost:8000. Edit `sources.json` to add employer board identifier
 ## Next implementation stage
 
 Use a private worker for local Ollama inference and PDF rendering. Send only necessary candidate evidence to a model you control. Bind approval to an authenticated owner, exact job description hash, documents, answers, and expiry. Add site-specific adapters only after testing; stop on CAPTCHA/MFA and unknown required answers. Never retry an ambiguous submission without checking a receipt. Do not attach a submission endpoint to this public static page without implementing authentication and server-side validation.
+
+## Career Ops refinements
+
+The pinned [Career Ops](https://github.com/career-ops-hq/career-ops) skill is installed in `.agents/skills/career-ops/SKILL.md`. Run `bash scripts/install-career-ops.sh` to restore the full local toolkit and locked dependencies. No paid provider is enabled. The current workspace install is not an installation on your personal computer. Profile-dependent upstream modes still require private onboarding.
+
+- The dashboard runs Career Ops' six-point role-clarity analyzer locally, with exact evidence quotes and recruiter questions. English keyword checks only; no impact on fit score and no legitimacy verdict.
+- Private pipeline stages include Saved, Reviewed, Applied, Responded, Assessment, Interview, Offer, Hired, Rejected, Discarded and SKIP. Applied requires an explicit self-submission checkbox and event date. Reviewed is not a full upstream evaluation.
+- Event history, notes, optional follow-up dates, and full normalized JD snapshots stay in browser storage. Saved jobs remain available when they leave the live feed. Reminders are displayed only when you open the app; they are not scheduled notifications.
+- Export/import JSON backups to move history between devices. Imports preview count/conflicts before replacing matching entries. Exported backups are private; never commit them to this public repository.
+- Role-review and application packages now include normalized JD snapshots, source hashes, and role-clarity findings.
+
+Durable project guidance is in `AGENTS.md`; source pin and integration scope are in `integrations/career-ops/`. This is repository memory, not a guarantee of assistant memory across chats. MIT attribution is in `docs/vendor/CAREER-OPS-LICENSE.txt`.
+
+Checks: `python -m unittest discover -s tests` and `node --test tests/*.test.mjs`.

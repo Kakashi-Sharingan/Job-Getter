@@ -3,3 +3,4 @@ __pycache__/
 *.pdf
 private/
 node_modules/
+/career-ops/

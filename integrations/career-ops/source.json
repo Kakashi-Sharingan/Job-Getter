@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/career-ops-hq/career-ops",
+  "commit": "24da28e8307d19f3002cf32eb953ad990d71da95",
+  "version": "1.39.0",
+  "license": "MIT",
+  "installed_path": "career-ops",
+  "data_path": "private/career-ops-data",
+  "browser_adaptation": "docs/vendor/role-clarity.mjs"
+}
