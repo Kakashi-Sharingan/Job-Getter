@@ -1,0 +1,26 @@
+{
+  "roles": [
+    "Java Backend Developer",
+    "Java Software Engineer",
+    "Backend Software Engineer",
+    "Spring Boot Developer"
+  ],
+  "skills": {
+    "java": 5,
+    "spring boot": 5,
+    "microservices": 3,
+    "rest": 3,
+    "sql": 2,
+    "mysql": 2,
+    "junit": 2,
+    "mockito": 2,
+    "gcp": 1,
+    "google cloud": 1,
+    "git": 1,
+    "ci/cd": 1
+  },
+  "experience_years": 2,
+  "threshold": 55,
+  "location": null,
+  "work_authorization": null
+}

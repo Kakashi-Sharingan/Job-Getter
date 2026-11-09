@@ -1,0 +1,34 @@
+[
+  {
+    "type": "greenhouse",
+    "board": "stripe"
+  },
+  {
+    "type": "greenhouse",
+    "board": "datadog"
+  },
+  {
+    "type": "greenhouse",
+    "board": "cloudflare"
+  },
+  {
+    "type": "greenhouse",
+    "board": "mongodb"
+  },
+  {
+    "type": "greenhouse",
+    "board": "okta"
+  },
+  {
+    "type": "greenhouse",
+    "board": "confluent"
+  },
+  {
+    "type": "lever",
+    "board": "wealthsimple"
+  },
+  {
+    "type": "lever",
+    "board": "stackadapt"
+  }
+]
