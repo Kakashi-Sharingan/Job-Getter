@@ -11,3 +11,17 @@ test('editing notes without changing status/date does not invent a transition',(
 test('invalid and future dates or fabricated statuses are rejected',()=>{assert.equal(validDate('2026-02-30'),false);assert.throws(()=>transition(null,job,'Sent by AI','2026-01-01'));assert.throws(()=>transition(null,job,'Saved','2999-01-01'));});
 test('backup roundtrip keeps closed job snapshots and follow-up date',()=>{const a=transition(null,job,'Applied','2026-01-03','note','2026-01-10');const r=parseBackup(backup({[job.id]:a}));assert.equal(r[job.id].followup,'2026-01-10');assert.equal(r[job.id].job.description,job.description);assert.equal(Object.getPrototypeOf(r),null);});
 test('import rejects unsafe links, dates, statuses, and prototype identities',()=>{const a=transition(null,job,'Saved','2026-01-01');for(const bad of [{...a,status:'Submitted'},{...a,event_date:'2026-02-30'},{...a,job:{...job,url:'javascript:alert(1)'}},{...a,job:{...job,id:'__proto__'}}])assert.throws(()=>parseBackup(JSON.stringify({version:1,records:[bad]})));});
+test('original applied snapshot survives a changed job and backup roundtrip',()=>{
+ const applied=transition(null,job,'Applied','2026-01-03');
+ const changed={...job,description:'The employer changed this role',content_hash:'changed'};
+ const interview=transition(applied,changed,'Interview','2026-02-01');
+ assert.equal(interview.job.content_hash,'changed');
+ assert.equal(interview.application_snapshot.content_hash,'abc');
+ const restored=parseBackup(backup({[job.id]:interview}));
+ assert.equal(restored[job.id].application_snapshot.description,job.description);
+});
+test('duplicate backup identities and null backups are rejected',()=>{
+ const a=transition(null,job,'Saved','2026-01-01');
+ assert.throws(()=>parseBackup(JSON.stringify({version:1,records:[a,a]})),/duplicate/);
+ assert.throws(()=>parseBackup('null'),/supported/);
+});

@@ -1,10 +1,27 @@
 'use strict';
 import {analyzeRoleClarity} from './vendor/role-clarity.mjs';
+import {parseFeed} from './feed.mjs';
 import {STATUSES,localToday,transition,backup,parseBackup,validateJob} from './tracker.mjs';
 const assetBase=new URL('.',import.meta.url),$=id=>document.getElementById(id);
 let data={jobs:[]},onlySaved=false,current=null,clarity=null,records=Object.create(null),legacy={};
-try {const raw=localStorage.getItem('job-getter-tracker-v1');if(raw)records=parseBackup(raw);legacy=JSON.parse(localStorage.getItem('job-getter-status')||'{}')||{};}catch{$('trackerStatus').textContent='Stored tracker could not be read. Export any existing backup before replacing it.';}
-function persist(){try{localStorage.setItem('job-getter-tracker-v1',backup(records));return true;}catch{$('trackerStatus').textContent='Browser storage unavailable. Export the tracker to keep this visit’s changes.';return false;}}
+let storageLocked=false,originalStored=null;
+function storageNotice(message, recovery=false){
+ $('storageWarning').hidden=false;$('storageMessage').textContent=message;
+ $('recoverStorage').hidden=!recovery;$('resetStorage').hidden=!recovery;
+}
+try {
+ originalStored=localStorage.getItem('job-getter-tracker-v1');
+ if(originalStored)records=parseBackup(originalStored);
+} catch {
+ storageLocked=originalStored!==null;
+ storageNotice(storageLocked?'Your stored tracker could not be read. It is protected from overwriting. Download the original data before resetting. New changes last for this visit only.':'Browser storage is unavailable. Export your tracker to keep any changes.',storageLocked);
+}
+try {const old=JSON.parse(localStorage.getItem('job-getter-status')||'{}');if(old&&typeof old==='object'&&!Array.isArray(old))legacy=old;}catch{}
+function persist(){
+ if(storageLocked)return false;
+ try{localStorage.setItem('job-getter-tracker-v1',backup(records));return true;}
+ catch{storageNotice('Browser storage is unavailable or full. Your latest changes last for this visit only. Open My pipeline and export your tracker to keep them.');return false;}
+}
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function validURL(value){try{const u=new URL(value);return u.protocol==='https:'?u.href:null;}catch{return null;}}
 function download(content,name,type='application/json'){const url=URL.createObjectURL(new Blob([content],{type})),a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -27,24 +44,51 @@ function render(){
 }
 function openJob(j){
  current=j;clarity=analyzeRoleClarity(j.description);const r=records[j.id];
- $('detailTitle').textContent=j.title;$('detailMeta').textContent=`${j.company} · ${j.location} · ${j.score}% keyword fit`;$('description').textContent=j.description;$('detailSkills').replaceChildren(...j.matched_skills.map(s=>el('span','tag',s)));const url=validURL(j.url);$('applyLink').hidden=!url;if(url)$('applyLink').href=url;
+ $('detailTitle').textContent=j.title;$('detailMeta').textContent=`${j.company} · ${j.location} · ${j.score}% keyword fit${j.description_truncated?' · Description shortened; read full posting':''}`;$('description').textContent=j.description;$('detailSkills').replaceChildren(...j.matched_skills.map(s=>el('span','tag',s)));const url=validURL(j.url);$('applyLink').hidden=!url;if(url)$('applyLink').href=url;
  $('reviewButton').textContent=r?.status==='Reviewed'?'Reviewed in this browser ✓':'Mark reviewed locally';$('exportStatus').textContent='';$('stageStatus').textContent='';$('stage').value=r?.status||'Saved';$('eventDate').value=r?.event_date||localToday();$('eventDate').max=localToday();$('notes').value=r?.notes||'';$('followupDate').value=r?.followup||'';$('submittedConfirm').checked=false;
  $('clarityPoints').replaceChildren();for(const point of clarity.points){const row=el('div','clarity-point');row.append(el('strong','',`${point.label} — ${point.status}`));for(const quote of point.evidence)row.append(el('blockquote','',quote));$('clarityPoints').append(row);}
  $('questionsHeading').hidden=!clarity.questions.length;$('questions').replaceChildren(...clarity.questions.map(x=>el('li','',x.question)));$('detail').showModal();
 }
 $('close').onclick=()=>$('detail').close();$('detail').addEventListener('close',()=>{$('resume').value='';});
-$('reviewButton').onclick=()=>{if(!current)return;const previous=records[current.id];if(previous&&!['Saved','Reviewed'].includes(previous.status)){$('stageStatus').textContent='Your application stage is preserved. Use the stage editor for changes.';return;}records[current.id]=transition(previous,current,'Reviewed',localToday(),previous?.notes||'',previous?.followup||'');persist();$('reviewButton').textContent='Reviewed in this browser ✓';$('stage').value='Reviewed';render();};
+$('reviewButton').onclick=()=>{if(!current)return;const previous=records[current.id];if(previous&&!['Saved','Reviewed'].includes(previous.status)){$('stageStatus').textContent='Your application stage is preserved. Use the stage editor for changes.';return;}records[current.id]=transition(previous,current,'Reviewed',localToday(),previous?.notes||'',previous?.followup||'');persist();$('reviewButton').textContent='Reviewed in this browser ✓';$('stage').value='Reviewed';$('eventDate').value=localToday();render();};
+$('stage').onchange=()=>{$('eventDate').value=$('stage').value===records[current?.id]?.status?records[current.id].event_date:localToday();$('submittedConfirm').checked=false;};
 $('saveStage').onclick=()=>{if(!current)return;try{const status=$('stage').value;if(status==='Applied'&&!$('submittedConfirm').checked)throw Error('Confirm you submitted the application yourself before recording Applied.');records[current.id]=transition(records[current.id],current,status,$('eventDate').value,$('notes').value,$('followupDate').value);const stored=persist();$('stageStatus').textContent=stored?'Saved privately in this browser. Nothing was submitted.':'Kept for this visit only. Browser storage failed; export a tracker backup.';render();}catch(error){$('stageStatus').textContent=error.message;}};
 $('exportReview').onclick=()=>{if(!current)return;download(JSON.stringify({version:1,generated_at:new Date().toISOString(),assessment_type:'Role clarity heuristic, not full Career Ops evaluation',job_snapshot:validateJob(current),role_clarity:clarity,eligibility:'Unverified; confirm location and authorization',source_reference:'career-ops-hq/career-ops@24da28e8307d19f3002cf32eb953ad990d71da95'},null,2),`role-review-${current.company}-${current.id.split(':').pop()}.json`);};
 $('export').onclick=async()=>{
  if(!current)return;const resume=$('resume').value.trim();if(!resume){$('exportStatus').textContent='Paste your resume text first.';return;}const j=current;
  const letter=`Dear Hiring Team,\n\nI am applying for the ${j.title} position at ${j.company}. Please find my resume below for your consideration.\n\n[Before sending: add a specific example from your real experience that addresses an important requirement in this posting.]\n\nI would welcome the opportunity to discuss the role and how my background relates to your team's needs. Thank you for considering my application.\n\nSincerely,\n[Your name]`;
- const packageData={job_id:j.id,job_url:j.url,job_content_hash:j.content_hash,job_snapshot:validateJob(j),role_clarity:clarity,prepared_at:new Date().toISOString(),status:'draft_not_submitted',resume_original:resume,cover_letter_draft:letter,checks_required:['Current posting and exact requisition identity','Location and work authorization','Every claim and required answer','Replace cover-letter placeholders'],note:'A local review package is not server-side submission approval.'};
+ const packageData={job_id:j.id,job_url:j.url,job_content_hash:j.content_hash,job_snapshot:validateJob(j),application_snapshot:records[j.id]?.application_snapshot||null,role_clarity:clarity,prepared_at:new Date().toISOString(),status:'draft_not_submitted',resume_original:resume,cover_letter_draft:letter,checks_required:['Current posting and exact requisition identity','Location and work authorization','Every claim and required answer','Replace cover-letter placeholders'],note:'A local review package is not server-side submission approval.'};
  try{const content=JSON.stringify(packageData,null,2),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(content)))).map(b=>b.toString(16).padStart(2,'0')).join('');download(JSON.stringify({...packageData,content_sha256:hash},null,2),`application-${j.company}-${j.id.split(':').pop()}.json`);$('exportStatus').textContent='Downloaded a draft review package with the JD snapshot. Nothing was sent or submitted.';}catch{$('exportStatus').textContent='Export failed. Keep your resume text and retry in a secure browser.';}
 };
+$('recoverStorage').onclick=()=>{if(originalStored!==null)download(originalStored,'job-getter-original-storage.txt','text/plain');};
+$('resetStorage').onclick=()=>{if(!confirm('Reset the unreadable tracker? Download its original data first. This will replace it with records from this visit.'))return;try{localStorage.setItem('job-getter-tracker-v1',backup(records));storageLocked=false;originalStored=null;$('storageWarning').hidden=true;}catch{storageNotice('Reset failed because browser storage is unavailable. Download a backup of your current records.',storageLocked);}};
 $('backup').onclick=()=>download(backup(records),'job-getter-private-tracker.json');$('import').onclick=()=>$('importFile').click();
 $('importFile').onchange=async()=>{const file=$('importFile').files[0];if(!file)return;try{if(file.size>15000000)throw Error('Backup exceeds the 15 MB import limit');const incoming=parseBackup(await file.text());const conflicts=Object.keys(incoming).filter(id=>records[id]).length;if(!confirm(`Import ${Object.keys(incoming).length} records? This will replace ${conflicts} matching records with the backup versions. Export your current tracker first if needed.`))return;Object.assign(records,incoming);const stored=persist();$('trackerStatus').textContent=`Imported ${Object.keys(incoming).length} records${stored?' privately in this browser.':'; browser storage failed, export to keep them.'}`;render();}catch(error){$('trackerStatus').textContent=`Import stopped: ${error.message}`;}finally{$('importFile').value='';}};
 for(const status of STATUSES){$('stage').append(el('option','',status));const opt=el('option','',status);opt.value=status;$('stageFilter').append(opt);}
 for(const id of ['query','location','threshold','stageFilter'])$(id).addEventListener('input',render);
 $('allNav').onclick=()=>{onlySaved=false;render();};$('savedNav').onclick=()=>{onlySaved=true;render();};
-(async()=>{try{const response=await fetch(new URL('data/jobs.json',assetBase),{cache:'no-cache'});if(!response.ok)throw Error(`HTTP ${response.status}`);data=await response.json();for(const j of data.jobs)if(!records[j.id]&&Object.hasOwn(legacy,j.id)&&['saved','reviewed'].includes(legacy[j.id]))records[j.id]=transition(null,j,legacy[j.id]==='reviewed'?'Reviewed':'Saved',localToday(),'Migrated legacy record; the event date shown is the migration date, not the original review date.');if(Object.keys(legacy).length){if(persist())localStorage.removeItem('job-getter-status');legacy={};}$('total').textContent=data.jobs.length;$('updated').textContent=new Date(data.updated_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});$('feedStatus').textContent=`${data.sources_ok.length} feeds refreshed${data.errors.length?` · ${data.errors.length} source errors; stale records labeled`:''}. Scheduled refresh daily; verify current availability at the employer.`;render();}catch{$('updated').textContent='Unavailable';$('feedStatus').textContent='Could not load current listings. Your private pipeline remains available; open My pipeline to review saved snapshots.';render();}})();
+(async()=>{
+ try {
+  const response=await fetch(new URL('data/jobs.json',assetBase),{cache:'no-cache'});
+  if(!response.ok)throw Error(`HTTP ${response.status}`);
+  data=parseFeed(await response.json());
+  const remaining={...legacy};
+  for(const j of data.jobs){
+   if(Object.hasOwn(legacy,j.id)&&['saved','reviewed'].includes(legacy[j.id])){
+    if(!records[j.id])records[j.id]=transition(null,j,legacy[j.id]==='reviewed'?'Reviewed':'Saved',localToday(),'Migrated legacy record; the event date shown is the migration date, not the original review date.');
+    delete remaining[j.id];
+   }
+  }
+  if(Object.keys(legacy).length&&persist()){
+   try{if(Object.keys(remaining).length)localStorage.setItem('job-getter-status',JSON.stringify(remaining));else localStorage.removeItem('job-getter-status');}catch{}
+  }
+  legacy=remaining;
+  $('total').textContent=data.jobs.length;
+  $('updated').textContent=data.updated_at?new Date(data.updated_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Unknown';
+  $('feedStatus').textContent=`${data.sources_ok.length} feeds refreshed${data.errors.length?` · ${data.errors.length} source errors; stale records labeled`:''}${data.invalid?` · ${data.invalid} invalid listing(s) skipped`:''}. Scheduled refresh daily; verify current availability at the employer.`;
+ } catch {
+  data={jobs:[]};$('total').textContent='—';$('updated').textContent='Unavailable';
+  $('feedStatus').textContent='Could not load current listings. Your private pipeline remains available; open My pipeline to review saved snapshots.';
+ }
+ render();
+})();

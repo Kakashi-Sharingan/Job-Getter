@@ -48,21 +48,27 @@ def fetch(source):
             time.sleep(min(30, int(retry) if retry.isdigit() else 2 ** (attempt+1)))
     jobs = []
     for raw in data['jobs'] if kind == 'greenhouse' else data:
+        if not isinstance(raw, dict) or not raw.get('id'):
+            continue
         title = raw.get('title', raw.get('text',''))
+        if not isinstance(title, str):
+            continue
         if not re.search(r'engineer|developer', title, re.I):
             continue
         if kind == 'greenhouse':
             desc = plain(raw.get('content',''))
-            location = raw.get('location',{}).get('name','Unknown')
+            location = (raw.get('location') or {}).get('name') or 'Unknown'
             link = raw.get('absolute_url','')
         else:
             desc = plain(raw.get('descriptionPlain', raw.get('description','')))
-            desc += ' ' + ' '.join(plain(x.get('text','')+' '+x.get('content','')) for x in raw.get('lists',[]))
-            location = raw.get('categories',{}).get('location','Unknown')
+            desc += ' ' + ' '.join(plain(x.get('text','')+' '+x.get('content','')) for x in (raw.get('lists') or []))
+            location = (raw.get('categories') or {}).get('location') or 'Unknown'
             link = raw.get('hostedUrl','')
         if not safe_url(link):
             continue
-        jobs.append({'id':f'{kind}:{board}:{raw["id"]}', 'company':board, 'title':title, 'location':location, 'url':link, 'description':desc[:25000], 'source':kind, 'content_hash':hashlib.sha256(desc.encode()).hexdigest()})
+        truncated = len(desc) > 25000
+        desc = desc[:25000]
+        jobs.append({'id':f'{kind}:{board}:{raw["id"]}', 'company':board, 'title':title, 'location':location, 'url':link, 'description':desc, 'description_truncated':truncated, 'source':kind, 'content_hash':hashlib.sha256(desc.encode()).hexdigest()})
     return jobs
 
 def run():

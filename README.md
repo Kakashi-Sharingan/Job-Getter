@@ -47,3 +47,9 @@ The pinned [Career Ops](https://github.com/career-ops-hq/career-ops) skill is in
 Durable project guidance is in `AGENTS.md`; source pin and integration scope are in `integrations/career-ops/`. This is repository memory, not a guarantee of assistant memory across chats. MIT attribution is in `docs/vendor/CAREER-OPS-LICENSE.txt`.
 
 Checks: `python -m unittest discover -s tests` and `node --test tests/*.test.mjs`.
+
+## Debugging regression checks
+
+`node tests/browser.cjs` exercises event dates, corrupt-storage protection, malformed-feed isolation, offline snapshots, submission confirmation, backup/import, mobile layout, and private resume export. It requires Playwright and Chromium; set `BASE_URL` for a running copy of the app and `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`. Browser contexts are isolated and fixtures replace the public feed, so tests do not touch your actual browser tracker or submit applications.
+
+Unreadable browser history is now locked against overwriting until you explicitly reset it; download the original stored data first. Applied-time snapshots are preserved separately from later job updates. Shortened descriptions are labeled, and their hash identifies the stored text. Old records created before snapshot preservation cannot recover an earlier posting version retroactively.
