@@ -20,15 +20,7 @@
     "board": "okta"
   },
   {
-    "type": "greenhouse",
-    "board": "confluent"
-  },
-  {
     "type": "lever",
     "board": "wealthsimple"
-  },
-  {
-    "type": "lever",
-    "board": "stackadapt"
   }
 ]
