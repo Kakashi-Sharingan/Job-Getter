@@ -26,7 +26,7 @@ async function fillReviewedForm(page,manifest,base){
    await field.fill(action.value);await field.press('ArrowDown');
    const options=page.getByRole('option');
    await options.first().waitFor({timeout:10000});
-   const option=page.getByRole('option').filter({hasText:/Vancouver.*(British Columbia|BC).*Canada/i});
+   const option=page.getByRole('option',{name:/^Vancouver,\s*(British Columbia|BC),\s*Canada$/i});
    if(await option.count()!==1)throw Error('Current city needs manual verification');
    await option.click();
   } else if(action.kind==='file'){
