@@ -30,3 +30,9 @@ Use these design principles in the app:
 Frontend lives in `docs/`; root `index.html` mirrors `docs/index.html` with prefixed asset paths because Pages publishes the repository root. Keep both entrypoints aligned. Browser role-clarity core is adapted from upstream at `docs/vendor/role-clarity.mjs`; preserve license and pinned source attribution. It is an English heuristic, not a legitimacy verdict or score input.
 
 Run `python -m unittest discover -s tests` and `node --test tests/*.test.mjs`. Browser-check changed user flows on desktop and mobile. Daily discovery is `.github/workflows/refresh.yml`. Never publish private data or the full local toolkit directory.
+
+## Search, documents and submission scope
+
+Search now uses multiword AND matching with common backend/Spring Boot spellings and Canadian city expansion (`docs/search.mjs`); test actual search results rather than only loading cards. The default fit threshold must not silently hide all searches. Resume parsing is conservative (`docs/resume-parser.mjs`); unsupported history layouts must stop for review rather than guess employers. Browser tailoring (`docs/tailor.mjs`) reorders evidence-backed content and generates real PDFs with embedded fonts (`docs/pdf.mjs`). Missing XYZ measurements stay unknown. Do not present this deterministic engine as a hosted LLM.
+
+A separate Hootsuite adapter (`scripts/greenhouse-worker.cjs`) can submit only after the owner approves the exact private manifest and attachments. Approval to store a review in Google Drive is distinct from approval to submit to an employer. Preserve the original receipt and never bypass its duplicate-attempt guard. The Pages site has no submission backend; fixture success is not a live employer receipt. Add no candidate data or approval manifests to public Git.

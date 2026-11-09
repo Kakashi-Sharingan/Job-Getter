@@ -20,7 +20,15 @@
     "board": "okta"
   },
   {
+    "type": "greenhouse",
+    "board": "hootsuite"
+  },
+  {
+    "type": "greenhouse",
+    "board": "ada18"
+  },
+  {
     "type": "lever",
-    "board": "wealthsimple"
+    "board": "pointclickcare"
   }
 ]

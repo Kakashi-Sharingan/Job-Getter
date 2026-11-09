@@ -53,7 +53,7 @@ def fetch(source):
         title = raw.get('title', raw.get('text',''))
         if not isinstance(title, str):
             continue
-        if not re.search(r'engineer|developer', title, re.I):
+        if not re.search(r'software|backend|back.end|java|full.stack|platform engineer|developer', title, re.I):
             continue
         if kind == 'greenhouse':
             desc = plain(raw.get('content',''))
@@ -88,8 +88,6 @@ def run():
                 successful.append(source['type']+':'+source['board'])
                 for job in result:
                     job['score'],job['matched_skills'] = score(job,profile)
-                    if job['score'] < 25:
-                        continue
                     job['first_seen'] = existing.get(job['id'],{}).get('first_seen',now)
                     job['last_seen'] = now
                     job['stale'] = False

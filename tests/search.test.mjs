@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {matchesQuery,matchesLocation} from '../docs/search.mjs';
+const job={title:'Backend Software Engineer',company:'Example',description:'Java services using Spring Boot and SQL',location:'Toronto, Ontario',matched_skills:['java']};
+test('search matches words across title and description in any order',()=>{assert.ok(matchesQuery(job,'Java Spring Boot'));assert.ok(matchesQuery(job,'backend java'));assert.ok(matchesQuery(job,'SpringBoot'));assert.equal(matchesQuery(job,'Java Kubernetes'),false);});
+test('Canada matches cities without requiring literal country text',()=>{assert.ok(matchesLocation(job,'Canada'));assert.ok(matchesLocation({...job,location:'Montréal, Québec'},'Canada'));assert.ok(matchesLocation({...job,location:'Vancouver, Canada'},'Vancouver BC'));assert.equal(matchesLocation({...job,location:'Remote - United States'},'Canada'),false);});
+test('Java does not match JavaScript and developer matches an engineer title',()=>{assert.equal(matchesQuery({...job,title:'JavaScript Developer',description:'JavaScript only',matched_skills:[]},'Java'),false);assert.ok(matchesQuery(job,'Java developer'));assert.ok(matchesQuery({...job,description:'Java. Spring-Boot RESTful APIs.'},'Java Spring Boot REST API'));});

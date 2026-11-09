@@ -1,55 +1,54 @@
 # Job Getter
 
-Free, GitHub-hosted job discovery and review dashboard, configured for Java/backend skills. No subscriptions, paid API, tracking analytics, candidate contact information, or uploaded resume included.
+Free job discovery, source-backed application documents, and private tracking.
 
-## What works
+## Hosted dashboard
 
-- Public Greenhouse and Lever discovery from the company registry in `sources.json`.
-- Daily GitHub Actions refresh at 15:23 UTC (scheduled runs may be delayed).
-- Stable job IDs, first-seen dates, description hashes, failed-source isolation and stale labeling.
-- Transparent keyword ranking from `profile.json` (not AI or an eligibility assessment).
-- Search, location filter, fit threshold, browser-local saved/reviewed statuses.
-- Resume text can be pasted locally and exported with an editable, deliberately conservative cover-letter draft. Resume text is not uploaded or persisted by the app.
-- GitHub Pages dashboard from the `main` branch root (a root entry page also supports `/docs`).
+https://kakashi-sharingan.github.io/Job-Getter/
 
-## Boundaries
+- Eight verified Greenhouse/Lever company feeds refresh daily through GitHub Actions.
+- Multiword search matches terms across titles, descriptions and skills. Canada matches recognized Canadian cities even where the country name is omitted.
+- Default minimum fit is 25%; Any fit and Clear filters reveal lower-scoring matches. Counts explain matches hidden by the threshold.
+- Scores are keyword heuristics, not AI evaluations or eligibility decisions. Sources are company boards, not a global LinkedIn/Indeed search.
+- Import a PDF/TXT resume or verified JSON profile. The conservative parser expects clear Summary, Skills, Experience and Education sections; employer/title/date structure must be reviewed. Unsupported formats stop for review.
+- Generate tailored resume, cover-letter and combined PDFs entirely in the browser, with embedded fonts. Relevant source-backed achievements and skills are reordered. XYZ audits retain missing measurements as unknown; numerical improvement metrics are never invented. This is source-based tailoring, not a hosted LLM.
+- Keep private application stages, notes, dates, follow-ups and applied-time snapshots. Export/import a backup before switching devices.
 
-This release does not submit applications, run n8n, call an LLM, generate tailored PDFs, or claim an application was sent. The export keeps the original resume unchanged. “Reviewed” is browser-local bookkeeping, not authenticated submission approval. No nationality, authorization, salary, or availability is inferred.
+Candidate contact details, resume data and application history are not included in this public repository. Imported resumes remain in page memory; close/reload the page to clear the imported profile. Tracking data stays in local browser storage. Never commit private exports.
 
-Public GitHub Pages has no private user account or secure backend. Never commit resumes, private answers, exported packages, tokens, or application receipts. Do not put secrets in frontend code. Anonymous visitors can see public job listings and generic skill weights. All browser-local choices are device-specific and can be lost if browser storage is cleared.
+## Submission worker
 
-GitHub Pages is free for this public repository under GitHub's applicable limits. Hosted Actions uses standard Linux runners; do not enable paid larger runners. Public-repository schedules may be disabled after inactivity; inspect Actions if updates stop. Scheduled code commits do not themselves trigger another workflow; Pages branch publishing handles the updated static files.
+GitHub Pages is a static website and cannot itself run Playwright or a secure submission server. `scripts/greenhouse-worker.cjs` is a separate, approval-bound worker for one supported Hootsuite requisition. It requires Playwright/Chromium in an execution environment. It is not an always-running service deployed by Pages.
 
-## Local run / tests
+The worker rejects missing approval, changed documents, unresolved questions and unreviewed privacy acknowledgement before networking. Approval must match the SHA-256 of a private manifest containing exact answers, destination and attachment hashes. It fills the live form, uploads only the reviewed combined PDF, and requires an explicit employer confirmation heading before recording success. It does not solve CAPTCHA, bypass access restrictions or blindly retry ambiguous submissions. An `attempt.json` blocks retries until a human verifies the result. This version supports only the reviewed Hootsuite requisition, not arbitrary employers.
+
+```bash
+node scripts/render-application.mjs private/candidate.json private/job.json private/application
+node scripts/greenhouse-worker.cjs private/application/manifest.json --approved-sha256 REVIEWED_HASH
+```
+
+The worker's application/receipt files stay private. No real employer submission is inferred from a fixture test or from clicking a button. A successful employer receipt is required to establish live end-to-end submission.
+
+## Test and run locally
 
 ```bash
 python -m unittest discover -s tests
+node --test tests/*.test.mjs
 python scripts/discover.py
-python -m http.server 8000 --directory docs
+python -m http.server 8001 --directory docs
+# With Playwright and Chromium available:
+node tests/browser.cjs
+node tests/worker-browser.cjs
 ```
 
-Open http://localhost:8000. Edit `sources.json` to add employer board identifiers. These APIs are company boards, not global job search. Closed listings disappear on successful refreshes. A source failure retains previous results as stale. This release neither scrapes LinkedIn/Indeed nor handles their logins.
+Browser tests use isolated contexts and mocked data; the worker browser test uses an intercepted form and does not send an employer application. `BASE_URL` can target the hosted dashboard, and `CHROMIUM_PATH` selects the test browser. Test synthetic profiles do not contain real candidate data.
 
-## Next implementation stage
+Discovery keeps stable IDs and first-seen dates, isolates failed sources, and labels retained records stale. Shortened descriptions are marked and their hashes identify the stored text. Unreadable local tracker data is protected from overwrites and can be downloaded before an explicit reset.
 
-Use a private worker for local Ollama inference and PDF rendering. Send only necessary candidate evidence to a model you control. Bind approval to an authenticated owner, exact job description hash, documents, answers, and expiry. Add site-specific adapters only after testing; stop on CAPTCHA/MFA and unknown required answers. Never retry an ambiguous submission without checking a receipt. Do not attach a submission endpoint to this public static page without implementing authentication and server-side validation.
+## Career Ops and dependencies
 
-## Career Ops refinements
+The pinned [Career Ops](https://github.com/career-ops-hq/career-ops) router is in `.agents/skills/career-ops/SKILL.md`; `bash scripts/install-career-ops.sh` restores the full ignored toolkit. Private upstream onboarding is separate. `AGENTS.md` preserves project guidance for future sessions.
 
-The pinned [Career Ops](https://github.com/career-ops-hq/career-ops) skill is installed in `.agents/skills/career-ops/SKILL.md`. Run `bash scripts/install-career-ops.sh` to restore the full local toolkit and locked dependencies. No paid provider is enabled. The current workspace install is not an installation on your personal computer. Profile-dependent upstream modes still require private onboarding.
+Role-clarity checks run the adapted upstream six-point English heuristic with quoted evidence and recruiter questions. They do not affect scores or establish employer legitimacy.
 
-- The dashboard runs Career Ops' six-point role-clarity analyzer locally, with exact evidence quotes and recruiter questions. English keyword checks only; no impact on fit score and no legitimacy verdict.
-- Private pipeline stages include Saved, Reviewed, Applied, Responded, Assessment, Interview, Offer, Hired, Rejected, Discarded and SKIP. Applied requires an explicit self-submission checkbox and event date. Reviewed is not a full upstream evaluation.
-- Event history, notes, optional follow-up dates, and full normalized JD snapshots stay in browser storage. Saved jobs remain available when they leave the live feed. Reminders are displayed only when you open the app; they are not scheduled notifications.
-- Export/import JSON backups to move history between devices. Imports preview count/conflicts before replacing matching entries. Exported backups are private; never commit them to this public repository.
-- Role-review and application packages now include normalized JD snapshots, source hashes, and role-clarity findings.
-
-Durable project guidance is in `AGENTS.md`; source pin and integration scope are in `integrations/career-ops/`. This is repository memory, not a guarantee of assistant memory across chats. MIT attribution is in `docs/vendor/CAREER-OPS-LICENSE.txt`.
-
-Checks: `python -m unittest discover -s tests` and `node --test tests/*.test.mjs`.
-
-## Debugging regression checks
-
-`node tests/browser.cjs` exercises event dates, corrupt-storage protection, malformed-feed isolation, offline snapshots, submission confirmation, backup/import, mobile layout, and private resume export. It requires Playwright and Chromium; set `BASE_URL` for a running copy of the app and `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`. Browser contexts are isolated and fixtures replace the public feed, so tests do not touch your actual browser tracker or submit applications.
-
-Unreadable browser history is now locked against overwriting until you explicitly reset it; download the original stored data first. Applied-time snapshots are preserved separately from later job updates. Shortened descriptions are labeled, and their hash identifies the stored text. Old records created before snapshot preservation cannot recover an earlier posting version retroactively.
+Vendored dependencies are jsPDF 3.0.4, PDF.js 4.10.38, and Liberation Sans. License notices are in `docs/vendor/`. PDF reading and rendering need no external AI API or upload. GitHub Pages and standard Actions are subject to GitHub's free usage limits; no paid runner or model provider is enabled.
