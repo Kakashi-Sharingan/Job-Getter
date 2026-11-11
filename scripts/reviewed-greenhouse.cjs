@@ -18,6 +18,10 @@ async function select(page,a){
  if(await option.count()!==1)throw Error(`Reviewed option unavailable: ${a.selector} / ${a.value}`);
  await option.click();
 }
+async function waitForEmployerReceipt(page,board,id,timeout=30000){
+  await page.waitForURL(u=>u.origin==='https://job-boards.greenhouse.io'&&u.pathname===`/${board}/jobs/${id}/confirmation`,{timeout});
+  await page.locator('body').filter({hasText:/thank you for applying|thanks for applying[\s\S]*your application has been received|application (has been |was )?submitted/i}).waitFor({timeout});
+}
 async function execute(file,digest,{dryRun=false}={}){
  const {m,base,board,id}=verify(file,digest),attempt=path.join(base,'attempt.json'),receipt=path.join(base,'receipt.json');
  if(fs.existsSync(attempt)||fs.existsSync(receipt))throw Error('Existing attempt or receipt; reconcile before retry');
@@ -36,7 +40,7 @@ async function execute(file,digest,{dryRun=false}={}){
    if(a.kind==='text')await field.fill(a.value);
    else if(a.kind==='select')await select(page,a);
    else if(a.kind==='location'){
-    await field.fill(a.value);await field.press('ArrowDown');const option=page.getByRole('option',{name:/^Vancouver,\s*(British Columbia|BC),\s*Canada$/i});await option.waitFor({timeout:15000});await option.click();
+    await field.fill(a.value);await field.press('ArrowDown');const option=page.getByRole('option',{name:new RegExp('^'+a.value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+',\\s*(British Columbia|BC),\\s*Canada$','i')});await option.waitFor({timeout:15000});await option.click();
    }else{
     const upload=page.waitForResponse(r=>r.request().method()==='POST'&&/^grnhse-prod-[a-z0-9-]+\.s3(?:\.[a-z0-9-]+)?\.amazonaws\.com$/.test(new URL(r.url()).hostname),{timeout:45000});
     await field.setInputFiles(path.join(base,a.value));const result=await upload;if(!result.ok())throw Error('Attachment upload rejected');await field.waitFor({state:'detached',timeout:20000});
@@ -48,7 +52,7 @@ async function execute(file,digest,{dryRun=false}={}){
   const btn=page.getByRole('button',{name:'Submit application',exact:true});if(await btn.count()!==1)throw Error('Submission control needs review');
   fs.writeFileSync(attempt,JSON.stringify({status:'submission_pending',job_id:m.job_id,manifest_sha256:digest,attempted_at:new Date().toISOString()},null,2),{flag:'wx'});clicked=true;
   await btn.click();
-  await page.getByRole('heading').filter({hasText:/thank you for (applying|your application)|application (has been |was )?submitted|application received/i}).first().waitFor({timeout:30000});
+  await waitForEmployerReceipt(page,board,id);
   const body=await page.locator('body').innerText();
   const result={status:'submitted',job_id:m.job_id,job_url:m.url,confirmation_url:page.url(),confirmation_text:body.slice(0,6000),submitted_at:new Date().toISOString(),manifest_sha256:digest};
   fs.writeFileSync(receipt,JSON.stringify(result,null,2));await page.screenshot({path:path.join(base,'confirmation.png'),fullPage:true});return result;
@@ -58,5 +62,5 @@ async function execute(file,digest,{dryRun=false}={}){
   throw Error(`${clicked?'Outcome unconfirmed; do not retry':'Stopped before submission'}: ${e.message}`);
  }finally{await browser.close();}
 }
-module.exports={verify,execute};
+module.exports={verify,execute,waitForEmployerReceipt};
 if(require.main===module){const [file,digest,...flags]=process.argv.slice(2);execute(file,digest,{dryRun:flags.includes('--dry-run')}).then(r=>console.log(JSON.stringify(r))).catch(e=>{console.error(e.message);process.exitCode=1;});}
