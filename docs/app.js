@@ -6,10 +6,12 @@ import {createPDF,applicationBlocks} from './pdf.mjs';
 import {matchesQuery,matchesLocation} from './search.mjs';
 import {parseFeed} from './feed.mjs';
 import {STATUSES,localToday,transition,backup,parseBackup,validateJob} from './tracker.mjs';
+import {parseApplicationBatch,batchProgress} from './batch.mjs';
 const assetBase=new URL('.',import.meta.url),$=id=>document.getElementById(id);
 let data={jobs:[]},onlySaved=false,current=null,clarity=null,records=Object.create(null),legacy={};
 let verifiedProfile=null,tailoredApplication=null;
 let storageLocked=false,originalStored=null;
+let applicationTarget=50;
 function storageNotice(message, recovery=false){
  $('storageWarning').hidden=false;$('storageMessage').textContent=message;
  $('recoverStorage').hidden=!recovery;$('resetStorage').hidden=!recovery;
@@ -32,6 +34,8 @@ function validURL(value){try{const u=new URL(value);return u.protocol==='https:'
 function download(content,name,type='application/json'){const url=URL.createObjectURL(new Blob([content],{type})),a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function listedJobs(){const all=new Map(data.jobs.map(j=>[j.id,j]));if(onlySaved)for(const r of Object.values(records))if(!all.has(r.job.id))all.set(r.job.id,{...r.job,stale:true,archived:true});return [...all.values()];}
 function render(){
+ const progress=batchProgress(records,applicationTarget);
+ $('batchProgress').textContent=`${progress.applied} applied / ${progress.target} target · ${progress.prepared} prepared · ${progress.approved} approved · ${progress.blocked} blocked · ${progress.unknown} need review · ${progress.remaining} applications remaining. Prepared and approved roles are not submissions.`;
  const q=$('query').value.toLowerCase(),loc=$('location').value.toLowerCase(),limit=Number($('threshold').value),stage=$('stageFilter').value;
  const candidates=listedJobs().filter(j=>matchesQuery(j,q)&&matchesLocation(j,loc));
  const hiddenByFit=onlySaved?0:candidates.filter(j=>j.score<limit).length;
@@ -77,6 +81,8 @@ $('downloadTailoredPackage').onclick=()=>{if(tailoredApplication)download(JSON.s
 $('recoverStorage').onclick=()=>{if(originalStored!==null)download(originalStored,'job-getter-original-storage.txt','text/plain');};
 $('resetStorage').onclick=()=>{if(!confirm('Reset the unreadable tracker? Download its original data first. This will replace it with records from this visit.'))return;try{localStorage.setItem('job-getter-tracker-v1',backup(records));storageLocked=false;originalStored=null;$('storageWarning').hidden=true;}catch{storageNotice('Reset failed because browser storage is unavailable. Download a backup of your current records.',storageLocked);}};
 $('backup').onclick=()=>download(backup(records),'job-getter-private-tracker.json');$('import').onclick=()=>$('importFile').click();
+$('importBatch').onclick=()=>$('batchFile').click();
+$('batchFile').onchange=async()=>{const file=$('batchFile').files[0];if(!file)return;try{if(file.size>15000000)throw Error('Batch exceeds the 15 MB import limit');const incoming=parseApplicationBatch(await file.text(),records);if(!confirm(`Import ${Object.keys(incoming.records).length} application outcomes privately? Existing application progress will be preserved.`))return;Object.assign(records,incoming.records);applicationTarget=incoming.target;const stored=persist();$('trackerStatus').textContent=`Imported ${Object.keys(incoming.records).length} application outcomes${stored?' privately.':'; export to preserve session changes.'} Employer receipts are imported evidence; this dashboard does not independently verify them.`;render();}catch(error){$('trackerStatus').textContent=`Batch import stopped: ${error.message}`;}finally{$('batchFile').value='';}};
 $('importFile').onchange=async()=>{const file=$('importFile').files[0];if(!file)return;try{if(file.size>15000000)throw Error('Backup exceeds the 15 MB import limit');const incoming=parseBackup(await file.text());const conflicts=Object.keys(incoming).filter(id=>records[id]).length;if(!confirm(`Import ${Object.keys(incoming).length} records? This will replace ${conflicts} matching records with the backup versions. Export your current tracker first if needed.`))return;Object.assign(records,incoming);const stored=persist();$('trackerStatus').textContent=`Imported ${Object.keys(incoming).length} records${stored?' privately in this browser.':'; browser storage failed, export to keep them.'}`;render();}catch(error){$('trackerStatus').textContent=`Import stopped: ${error.message}`;}finally{$('importFile').value='';}};
 for(const status of STATUSES){$('stage').append(el('option','',status));const opt=el('option','',status);opt.value=status;$('stageFilter').append(opt);}
 for(const id of ['query','location','threshold','stageFilter'])$(id).addEventListener('input',render);

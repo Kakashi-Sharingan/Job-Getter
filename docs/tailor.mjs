@@ -22,7 +22,9 @@ export function createApplication(input,job){
  const achievements=experience.flatMap(r=>r.achievements.map(a=>({...a,company:r.company}))).sort((a,b)=>relevance(b.text,job)-relevance(a.text,job));
  const first=achievements[0],second=achievements.find(a=>a.id!==first?.id);
  const evidenceParagraph=[first,second].filter(Boolean).map(a=>`At ${a.company}, I ${a.text.charAt(0).toLowerCase()+a.text.slice(1)}`).join(' ');
- const coverLetter=`Dear ${job.company} Hiring Team,\n\nI am applying for the ${job.title} position. ${profile.cover_summary||profile.summary}\n\n${evidenceParagraph}\n\nI would welcome the opportunity to discuss how my background relates to the responsibilities in this posting. Thank you for considering my application.\n\nSincerely,\n${profile.name}`;
+ const aligned=skills.filter(skill=>jd.includes(normalize(skill))).slice(0,3);
+ const connection=aligned.length?`The posting's focus on ${aligned.join(', ')} connects directly with the skills in my background. `:'';
+ const coverLetter=`Dear ${job.company} Hiring Team,\n\nI am applying for the ${job.title} position. ${profile.cover_summary||profile.summary}\n\n${connection}${evidenceParagraph}\n\nI would welcome the opportunity to discuss how I could contribute to your team. Thank you for considering my application.\n\nSincerely,\n${profile.name}`;
  return {version:1,status:'draft_not_submitted',method:'Source-based tailoring; no AI API',target:{id:job.id,title:job.title,company:job.company,url:job.url,content_hash:job.content_hash},resume:{...profile,skills,experience},cover_letter:coverLetter,xyz_audit:achievements.map(a=>({id:a.id,x:a.x||null,y:a.y||null,z:a.z||null,metric:a.metric||null,evidence:a.evidence,note:a.metric?'Metric cited in source':'No quantitative metric supplied; qualitative outcome retained'})),job_snapshot:job,created_at:new Date().toISOString()};
 }
 export function documentHTML(application,kind='resume'){

@@ -52,3 +52,9 @@ The pinned [Career Ops](https://github.com/career-ops-hq/career-ops) router is i
 Role-clarity checks run the adapted upstream six-point English heuristic with quoted evidence and recruiter questions. They do not affect scores or establish employer legitimacy.
 
 Vendored dependencies are jsPDF 3.0.4, PDF.js 4.10.38, and Liberation Sans. License notices are in `docs/vendor/`. PDF reading and rendering need no external AI API or upload. GitHub Pages and standard Actions are subject to GitHub's free usage limits; no paid runner or model provider is enabled.
+
+### Approved application batches
+
+My pipeline → **Import application batch** loads a private worker export into your browser. The target counter separates Prepared, Approved, Blocked, Needs review, and Applied. Imported receipts must match the job and submission date; an older queue cannot downgrade an existing interview or application. The dashboard does not independently verify imported receipts or submit forms.
+
+For an already reviewed private queue, `scripts/reviewed-greenhouse.cjs` supports explicitly approved Greenhouse manifests, checks current posting/questions and attachment hashes, waits for uploads, and records an employer confirmation. It stops on changed fields, unknown outcomes, and existing attempts. It does not bypass challenges or provide a universal ATS integration. Export private outcomes with `node scripts/export-application-batch.mjs <private-queue.json> <private-output.json>`. Keep both files outside public Git. Existing reviewed PDFs stay unchanged when browser templates improve.
