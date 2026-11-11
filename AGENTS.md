@@ -6,7 +6,7 @@ Read this file at the start of work on this app. It is the durable project memor
 
 - Keep the app free of paid APIs and subscriptions. Do not activate paid model providers.
 - Use Career Ops as a reference and toolkit for improving this app.
-- Prepare applications for review. No application may be sent without the owner's explicit approval of its exact contents. The current Pages release has no submission backend.
+- Standing owner authorization: discover matching Canadian roles, prepare truthful tailored applications, and submit without per-role approval prompts. This supersedes the earlier exact-content review requirement. Check real requirements against verified facts; unknown required personal disclosures, sign-ins/challenges, duplicate/uncertain outcomes, and unavailable channels remain blockers. The Pages release has no submission backend.
 - Keep the resume, identity/contact details, authorization answers, and application history out of public Git and GitHub Pages.
 
 ## Career Ops skill
