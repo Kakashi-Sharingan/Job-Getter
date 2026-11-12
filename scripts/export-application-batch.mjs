@@ -8,16 +8,19 @@ const root=dirname(resolve(queueFile)),queue=JSON.parse(readFileSync(queueFile))
 const applications=queue.prepared.map(row=>{
  const base=join(root,'review',String(row.number).padStart(2,'0'));
  const read=name=>existsSync(join(base,name))?JSON.parse(readFileSync(join(base,name))):null;
- const receipt=read('receipt.json'),attempt=read('attempt.json'),manifest=read('approved-manifest.json'),error=read('outcome-error.json');
+ const receipt=read('receipt.json'),attempt=read('attempt.json'),error=read('outcome-error.json');
+ const manifestFile=receipt?.manifest_file||'approved-manifest.json';
+ if(!['approved-manifest.json','embedded-manifest.json','submitted-embedded-manifest.json','ashby-reviewed-manifest.json'].includes(manifestFile))throw Error('Unsupported receipt manifest');
+ const manifest=read(manifestFile);
  let status='prepared',notes=row.fit_notes||'';
  if(existsSync(approval))status='approved';
  const unknowns=(row.proposed_answers||[]).filter(a=>a.answer.startsWith('BLOCKED')).map(a=>a.question);
  unknowns.push(...Object.entries(row.custom_proposed_answers||{}).filter(([,a])=>a.startsWith('BLOCKED')).map(([q])=>q));
  if(unknowns.length||manifest?.blockers?.length||!manifest){status='blocked';notes+='\nRequired answers or form adapter need review: '+[...unknowns,...manifest?.blockers||[]].join('; ');}
  if(error){status='blocked';notes+='\nWorker stopped: '+error.error;}
- if(attempt&&!receipt){status='unknown';notes+='\nSubmission outcome requires reconciliation. Do not retry automatically.';}
+ if(attempt&&!receipt){if(attempt.status==='not_submitted_upload_failed'){status='blocked';notes+='\nAttachment upload failed; no application receipt.';}else{status='unknown';notes+='\nSubmission outcome requires reconciliation. Do not retry automatically.';}}
  if(receipt){
-  if(!manifest||receipt.status!=='submitted'||receipt.job_id!==row.job.id||receipt.manifest_sha256!==createHash('sha256').update(readFileSync(join(base,'approved-manifest.json'))).digest('hex'))throw Error('Receipt/manifest identity mismatch');
+  if(!manifest||receipt.status!=='submitted'||receipt.job_id!==row.job.id||receipt.manifest_sha256!==createHash('sha256').update(readFileSync(join(base,manifestFile))).digest('hex'))throw Error('Receipt/manifest identity mismatch');
   for(const [name,hash] of Object.entries(manifest.files||{}))if(createHash('sha256').update(readFileSync(join(base,name))).digest('hex')!==hash)throw Error('Submitted attachment changed');
   status='submitted';
  }
