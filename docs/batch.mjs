@@ -1,4 +1,8 @@
 import {validateJob,validDate,localToday,transition} from './tracker.mjs';
+export function receiptEventDate(timestamp,timeZone='UTC'){
+ const date=new Date(timestamp);if(!Number.isFinite(+date))throw Error('Invalid receipt timestamp');
+ try{const parts=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);const get=k=>parts.find(p=>p.type===k).value;return `${get('year')}-${get('month')}-${get('day')}`;}catch{throw Error('Invalid receipt time zone');}
+}
 export function parseApplicationBatch(text,previous={}){
  const batch=JSON.parse(text);
  if(batch?.version!==1||batch.kind!=='job-getter-application-batch'||!Array.isArray(batch.applications)||batch.applications.length>500)throw Error('Unsupported application batch');
@@ -12,7 +16,7 @@ export function parseApplicationBatch(text,previous={}){
   let note=String(item.notes||'').slice(0,2500);
   if(item.status==='submitted'){
    const r=item.receipt;
-   if(!r||r.status!=='submitted'||r.job_id!==job.id||typeof r.confirmation_text!=='string'||!r.confirmation_text.trim()||!/^\d{4}-\d{2}-\d{2}T/.test(r.submitted_at)||!Number.isFinite(Date.parse(r.submitted_at))||r.submitted_at.slice(0,10)!==item.event_date||!/^[a-f0-9]{64}$/.test(r.manifest_sha256||''))throw Error('Submitted outcome requires a matching employer receipt');
+   if(!r||r.status!=='submitted'||r.job_id!==job.id||typeof r.confirmation_text!=='string'||!r.confirmation_text.trim()||!/^\d{4}-\d{2}-\d{2}T/.test(r.submitted_at)||!Number.isFinite(Date.parse(r.submitted_at))||receiptEventDate(r.submitted_at,item.event_timezone||'UTC')!==item.event_date||!/^[a-f0-9]{64}$/.test(r.manifest_sha256||''))throw Error('Submitted outcome requires a matching employer receipt');
    const u=new URL(r.confirmation_url),gh=job.id.match(/^greenhouse:([a-z0-9-]+):(\d+)$/i);
    const hosted=gh&&u.origin==='https://job-boards.greenhouse.io'&&u.pathname===`/${gh[1]}/jobs/${gh[2]}/confirmation`;
    const mailed=r.channel==='email'&&r.provider==='gmail'&&r.provider_status==='sent'&&r.sent_verified===true&&/^[a-f0-9]+$/.test(r.message_id||'')&&u.origin==='https://mail.google.com'&&u.hash===`#sent/${r.message_id}`;
