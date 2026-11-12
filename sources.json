@@ -30,5 +30,21 @@
   {
     "type": "lever",
     "board": "pointclickcare"
+  },
+  {
+    "type": "greenhouse",
+    "board": "konradgroup"
+  },
+  {
+    "type": "greenhouse",
+    "board": "affirm"
+  },
+  {
+    "type": "greenhouse",
+    "board": "d2l"
+  },
+  {
+    "type": "greenhouse",
+    "board": "appdirect"
   }
 ]
