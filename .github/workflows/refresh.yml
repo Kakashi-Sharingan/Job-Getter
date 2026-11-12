@@ -1,5 +1,9 @@
 name: Refresh jobs
 on:
+  push:
+    paths:
+      - 'sources.json'
+      - '.github/workflows/refresh.yml'
   schedule:
     - cron: '23 15 * * *'
   workflow_dispatch:
