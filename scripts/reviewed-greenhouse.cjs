@@ -20,7 +20,7 @@ async function select(page,a){
 }
 async function waitForEmployerReceipt(page,board,id,timeout=30000){
   await page.waitForURL(u=>u.origin==='https://job-boards.greenhouse.io'&&u.pathname===`/${board}/jobs/${id}/confirmation`,{timeout});
-  await page.locator('body').filter({hasText:/thank you for applying|thanks for applying[\s\S]*your application has been received|application (has been |was )?submitted/i}).waitFor({timeout});
+  await page.locator('body').filter({hasText:/thank you for applying|thanks for applying[\s\S]*your application has been received|application sent!|application (has been |was )?(successfully )?submitted/i}).waitFor({timeout});
 }
 async function execute(file,digest,{dryRun=false}={}){
  const {m,base,board,id}=verify(file,digest),attempt=path.join(base,'attempt.json'),receipt=path.join(base,'receipt.json');
