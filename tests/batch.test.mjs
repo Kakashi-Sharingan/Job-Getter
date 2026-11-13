@@ -3,6 +3,17 @@ import {parseApplicationBatch,batchProgress,receiptEventDate} from '../docs/batc
 const job={id:'greenhouse:example:123',title:'Software Engineer',company:'Example',location:'Canada',description:'Java',url:'https://example.com/careers/123',source:'greenhouse'};
 const item={job,status:'approved',event_date:'2026-01-01'};
 const pack=(applications)=>JSON.stringify({version:1,kind:'job-getter-application-batch',target:50,applications});
+test('a matching email delivery failure removes goal credit and an older sent receipt cannot undo it',()=>{
+ const receipt={status:'submitted',job_id:job.id,channel:'email',provider:'gmail',provider_status:'sent',sent_verified:true,message_id:'a123',submitted_at:'2026-01-01T12:00:00Z',manifest_sha256:'a'.repeat(64),confirmation_url:'https://mail.google.com/mail/u/0/#sent/a123',confirmation_text:'Gmail Sent verified; acknowledgement pending.'};
+ const sent={...item,status:'submitted',receipt};const previous=parseApplicationBatch(pack([sent])).records;
+ const failure={provider:'gmail',job_id:job.id,original_message_id:'a123',message_id:'beef',failed_at:'2026-01-02T12:00:00Z',reason:'Mailbox disabled',confirmation_url:'https://mail.google.com/mail/u/0/#all/beef'};
+ const row={...sent,status:'delivery_failed',event_date:'2026-01-02',delivery_failure:failure};
+ const records=parseApplicationBatch(pack([row]),previous).records;
+ assert.equal(records[job.id].status,'Delivery failed');assert.equal(batchProgress(records).applied,0);assert.equal(records[job.id].history[0].to,'Applied');
+ assert.equal(parseApplicationBatch(pack([sent]),records).records[job.id].status,'Delivery failed');
+ for(const bad of[{...failure,original_message_id:'wrong'},{...failure,job_id:'other'},{...failure,reason:''},{...failure,failed_at:'2025-01-01T00:00:00Z'},{...failure,confirmation_url:'https://example.com/#all/beef'}])assert.throws(()=>parseApplicationBatch(pack([{...row,delivery_failure:bad}])));
+ const fresh=parseApplicationBatch(pack([row])).records;assert.equal(fresh[job.id].history.length,2);assert.equal(fresh[job.id].application_snapshot.id,job.id);
+});
 test('embedded Greenhouse confirmation must bind the exact board and requisition',()=>{
  const receipt={status:'submitted',job_id:job.id,submitted_at:'2026-01-01T12:00:00Z',manifest_sha256:'a'.repeat(64),confirmation_url:'https://job-boards.greenhouse.io/embed/job_app/confirmation?for=example&token=123',confirmation_text:'Task complete! Our Talent team will review your experience.'};
  for(const url of[job.url,'https://job-boards.greenhouse.io/example/jobs/123']){

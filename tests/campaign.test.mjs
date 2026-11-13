@@ -13,3 +13,9 @@ test('only real submissions count and later outcomes never count as a second app
  assert.equal(dailyProgress({saved,sent},50,'2026-11-13').applied,1);
  assert.equal(dailyProgress({saved,sent},50,'2026-11-14').applied,0);
 });
+test('bounced mail is excluded without erasing the attempt and a later successful retry uses its own date',()=>{
+ const failed={job,status:'Delivery failed',event_date:'2026-11-14',application_snapshot:job,history:[{to:'Applied',event_date:'2026-11-13'},{to:'Delivery failed',event_date:'2026-11-14'}]};
+ assert.equal(dailyProgress({failed},50,'2026-11-13').applied,0);assert.equal(dailyProgress({failed},50,'2026-11-14').lifetime,0);assert.equal(failed.history.length,2);
+ const retry={...failed,status:'Applied',event_date:'2026-11-15',history:[...failed.history,{to:'Applied',event_date:'2026-11-15'}]};
+ assert.equal(dailyProgress({retry},50,'2026-11-15').applied,1);assert.equal(dailyProgress({retry},50,'2026-11-13').applied,0);
+});
