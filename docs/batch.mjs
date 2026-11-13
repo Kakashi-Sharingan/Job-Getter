@@ -19,8 +19,10 @@ export function parseApplicationBatch(text,previous={}){
    if(!r||r.status!=='submitted'||r.job_id!==job.id||typeof r.confirmation_text!=='string'||!r.confirmation_text.trim()||!/^\d{4}-\d{2}-\d{2}T/.test(r.submitted_at)||!Number.isFinite(Date.parse(r.submitted_at))||receiptEventDate(r.submitted_at,item.event_timezone||'UTC')!==item.event_date||!/^[a-f0-9]{64}$/.test(r.manifest_sha256||''))throw Error('Submitted outcome requires a matching employer receipt');
    const u=new URL(r.confirmation_url),gh=job.id.match(/^greenhouse:([a-z0-9-]+):(\d+)$/i);
    const hosted=gh&&u.origin==='https://job-boards.greenhouse.io'&&u.pathname===`/${gh[1]}/jobs/${gh[2]}/confirmation`;
+   const embedded=gh&&u.origin==='https://job-boards.greenhouse.io'&&u.pathname==='/embed/job_app/confirmation'&&u.searchParams.getAll('for').length===1&&u.searchParams.get('for')===gh[1]&&u.searchParams.getAll('token').length===1&&u.searchParams.get('token')===gh[2];
    const mailed=r.channel==='email'&&r.provider==='gmail'&&r.provider_status==='sent'&&r.sent_verified===true&&/^[a-f0-9]+$/.test(r.message_id||'')&&u.origin==='https://mail.google.com'&&u.hash===`#sent/${r.message_id}`;
-   if(u.protocol!=='https:'||(!hosted&&!mailed&&u.origin!==new URL(job.url).origin))throw Error('Receipt origin does not match employer');
+   const employer=u.origin===new URL(job.url).origin&&(!gh||u.origin!=='https://job-boards.greenhouse.io');
+   if(u.protocol!=='https:'||(!hosted&&!embedded&&!mailed&&!employer))throw Error('Receipt origin does not match employer');
    if(mailed)note+='\nApplication sent by email. Employer delivery and acknowledgement are not verified.';
    note+=`\nImported worker receipt: ${u.href}\nSubmitted: ${r.submitted_at}\nManifest SHA-256: ${r.manifest_sha256}\n${r.confirmation_text.slice(0,800)}\nReceipt is imported evidence; this static dashboard does not independently verify it.`;
   }
