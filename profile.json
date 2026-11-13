@@ -3,7 +3,9 @@
     "Java Backend Developer",
     "Java Software Engineer",
     "Backend Software Engineer",
-    "Spring Boot Developer"
+    "Spring Boot Developer",
+    "Business Analyst",
+    "Business Systems Analyst"
   ],
   "skills": {
     "java": 5,
@@ -22,5 +24,20 @@
   "experience_years": 2,
   "threshold": 55,
   "location": null,
-  "work_authorization": null
+  "work_authorization": null,
+  "tracks": {
+    "business_analysis": {
+      "skills": {
+        "business analysis": 4,
+        "requirements": 3,
+        "stakeholder": 3,
+        "sql": 3,
+        "agile": 2,
+        "jira": 2,
+        "confluence": 2,
+        "testing": 2,
+        "business administration": 2
+      }
+    }
+  }
 }

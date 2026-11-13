@@ -13,7 +13,7 @@ export function validateProfile(profile){
  for(const skill of profile.skills)if(!normalize(profile.source_resume).includes(normalize(skill)))throw Error(`Skill is not in the source resume: ${skill}`);
  return profile;
 }
-function relevance(text,job){const words=new Set(normalize(`${job.title} ${job.description}`).split(' '));return normalize(text).split(' ').filter(w=>w.length>3&&words.has(w)).length;}
+function relevance(text,job){const words=new Set(normalize(`${job.title} ${job.description}`).split(' '));return normalize(text).split(' ').filter(w=>(w.length>3||/^(sql|api|apis|git|gcp|aws|qa|uat|ux|ai)$/.test(w))&&words.has(w)).length;}
 export function createApplication(input,job){
  const profile=validateProfile(input);
  const experience=profile.experience.map(role=>({...role,achievements:[...role.achievements].sort((a,b)=>relevance(b.text,job)-relevance(a.text,job))}));
@@ -23,9 +23,14 @@ export function createApplication(input,job){
  const first=achievements[0],second=achievements.find(a=>a.id!==first?.id);
  const evidenceParagraph=[first,second].filter(Boolean).map(a=>`At ${a.company}, I ${a.text.charAt(0).toLowerCase()+a.text.slice(1)}`).join(' ');
  const aligned=skills.filter(skill=>jd.includes(normalize(skill))).slice(0,3);
+ const businessAnalysis=/\bbusiness(?:\s+systems|\s+process|\s+technology)?\s+analyst\b/i.test(job.title);
+ const degree=profile.education.find(e=>/\bMBA\b|master.*business administration/i.test(e.degree)&&normalize(profile.source_resume).includes(normalize(e.degree)));
+ const focus=aligned.length?` Relevant strengths for this role: ${aligned.join(', ')}.`:'';
+ const summary=businessAnalysis?`${degree?'MBA education. ':''}${profile.summary} Targeting Business Analyst roles through transferable experience.${focus}`:`${profile.summary}${focus}`;
+ const resume={...profile,summary,skills,experience};
  const connection=aligned.length?`The posting's focus on ${aligned.join(', ')} connects directly with the skills in my background. `:'';
  const coverLetter=`Dear ${job.company} Hiring Team,\n\nI am applying for the ${job.title} position. ${profile.cover_summary||profile.summary}\n\n${connection}${evidenceParagraph}\n\nI would welcome the opportunity to discuss how I could contribute to your team. Thank you for considering my application.\n\nSincerely,\n${profile.name}`;
- return {version:1,status:'draft_not_submitted',method:'Source-based tailoring; no AI API',target:{id:job.id,title:job.title,company:job.company,url:job.url,content_hash:job.content_hash},resume:{...profile,skills,experience},cover_letter:coverLetter,xyz_audit:achievements.map(a=>({id:a.id,x:a.x||null,y:a.y||null,z:a.z||null,metric:a.metric||null,evidence:a.evidence,note:a.metric?'Metric cited in source':'No quantitative metric supplied; qualitative outcome retained'})),job_snapshot:job,created_at:new Date().toISOString()};
+ return {version:1,status:'draft_not_submitted',method:'Source-based tailoring; no AI API',target:{id:job.id,title:job.title,company:job.company,url:job.url,content_hash:job.content_hash},resume,cover_letter:coverLetter,tailoring:{role_family:businessAnalysis?'business-analysis':'software-engineering',aligned_skills:aligned,evidence_ids:achievements.map(a=>a.id),note:'Keywords do not establish eligibility. Review required experience and specialist skills before submission.'},xyz_audit:achievements.map(a=>({id:a.id,x:a.x||null,y:a.y||null,z:a.z||null,metric:a.metric||null,evidence:a.evidence,note:a.metric?'Metric cited in source':'No quantitative metric supplied; qualitative outcome retained'})),job_snapshot:job,created_at:new Date().toISOString()};
 }
 export function documentHTML(application,kind='resume'){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

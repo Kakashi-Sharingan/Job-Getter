@@ -5,6 +5,18 @@ spec=importlib.util.spec_from_file_location('discover',Path(__file__).resolve().
 m=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 class DiscoveryTests(unittest.TestCase):
+    def test_business_analysis_uses_its_own_keyword_track(self):
+        p={'skills':{'java':5},'tracks':{'business_analysis':{'skills':{'sql':3,'stakeholder':2}}}}
+        value,skills=m.score({'title':'Business Systems Analyst','description':'SQL stakeholder collaboration'},p)
+        self.assertEqual(value,100)
+        self.assertEqual(skills,['sql','stakeholder'])
+    def test_business_analyst_posting_is_not_dropped_by_engineering_filter(self):
+        from unittest.mock import patch
+        import io,json
+        posting={'jobs':[{'id':2,'title':'Business Analyst','content':'SQL','location':{'name':'Canada'},'absolute_url':'https://example.com/job/2'}]}
+        with patch.object(m.urllib.request,'urlopen',return_value=io.BytesIO(json.dumps(posting).encode())):
+            jobs=m.fetch({'type':'greenhouse','board':'example'})
+        self.assertEqual(jobs[0]['title'],'Business Analyst')
     def test_java_is_not_javascript(self):
         score,skills=m.score({'title':'Software Engineer','description':'JavaScript only'}, {'skills':{'java':5}})
         self.assertEqual(skills,[])

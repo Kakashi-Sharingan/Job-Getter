@@ -5,3 +5,10 @@ const job={id:'test:1',title:'Java API Developer',company:'Example Employer',des
 test('tailoring reorders evidence without changing official role history',()=>{const app=createApplication(profile,job);assert.equal(app.resume.experience[0].title,'Developer');assert.equal(app.resume.experience[0].dates,'2021–2023');assert.equal(app.resume.experience[0].achievements[0].id,'java');assert.equal(profile.experience[0].achievements[0].id,'sql');assert.ok(app.cover_letter.includes('Java API Developer'));assert.ok(app.xyz_audit.every(a=>a.metric===null));});
 test('unsupported numerical achievements and missing evidence are rejected',()=>{const p=structuredClone(profile);p.experience[0].achievements[0].text='Reduced latency by 45%';assert.throws(()=>createApplication(p,job),/Unsupported number/);p.experience[0].achievements[0].text='Wrote SQL queries.';p.experience[0].achievements[0].evidence='Invented claim';assert.throws(()=>createApplication(p,job),/source evidence/);});
 test('PDF export generates real font-embedded PDF bytes',()=>{const app=createApplication(profile,job);const pdf=createPDF(applicationBlocks(app,'combined'));const text=new TextDecoder().decode(pdf);assert.ok(text.startsWith('%PDF-'));assert.ok(text.includes('/FontFile2'));assert.ok(text.includes('/Count 2'));});
+test('business analyst tailoring states a transition and keeps verified engineering history',()=>{
+ const input=structuredClone(profile);input.source_resume+=' MBA, Example University.';input.education=[{degree:'MBA',institution:'Example University',dates:'2025'}];
+ const app=createApplication(input,{...job,title:'Business Systems Analyst',description:'SQL and requirements analysis'});
+ assert.equal(app.tailoring.role_family,'business-analysis');assert.match(app.resume.summary,/MBA/);assert.match(app.resume.summary,/Targeting Business Analyst/);
+ assert.equal(app.resume.experience[0].title,'Developer');assert.deepEqual(app.resume.skills,['SQL','Java']);assert.ok(!app.resume.skills.includes('requirements analysis'));
+ assert.equal(app.resume.experience[0].achievements[0].id,'sql');assert.ok(app.xyz_audit.every(a=>a.metric===null));
+});

@@ -21,12 +21,14 @@ def safe_url(url):
 
 def score(job, profile):
     text = (job['title'] + ' ' + job['description']).lower()
-    matched = [s for s in profile['skills'] if re.search(r'(?<![a-z])' + re.escape(s) + r'(?![a-z])', text)]
-    points = sum(profile['skills'][s] for s in matched)
-    role = bool(re.search(r'backend|back.end|software|java|platform engineer', job['title'], re.I))
+    business_analysis = bool(re.search(r'\bbusiness(?:\s+systems|\s+process|\s+technology)?\s+analyst\b', job['title'], re.I))
+    weights = profile.get('tracks', {}).get('business_analysis', {}).get('skills', profile['skills']) if business_analysis else profile['skills']
+    matched = [s for s in weights if re.search(r'(?<![a-z])' + re.escape(s) + r'(?![a-z])', text)]
+    points = sum(weights[s] for s in matched)
+    role = business_analysis or bool(re.search(r'backend|back.end|software|java|platform engineer', job['title'], re.I))
     senior = bool(re.search(r'\bstaff\b|\bprincipal\b|\bdirector\b|\bmanager\b', job['title'], re.I))
     # Heuristic, not an LLM assessment or eligibility determination.
-    value = min(100, round(75 * points / sum(profile['skills'].values())) + (25 if role else 0))
+    value = min(100, round(75 * points / sum(weights.values())) + (25 if role else 0))
     if senior:
         value = max(0, value - 25)
     return value, matched
@@ -53,7 +55,7 @@ def fetch(source):
         title = raw.get('title', raw.get('text',''))
         if not isinstance(title, str):
             continue
-        if not re.search(r'software|backend|back.end|java|full.stack|platform engineer|developer', title, re.I):
+        if not re.search(r'software|backend|back.end|java|full.stack|platform engineer|developer|\bbusiness(?:\s+systems|\s+process|\s+technology)?\s+analyst\b', title, re.I):
             continue
         if kind == 'greenhouse':
             desc = plain(raw.get('content',''))

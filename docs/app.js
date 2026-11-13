@@ -7,6 +7,7 @@ import {matchesQuery,matchesLocation} from './search.mjs';
 import {parseFeed} from './feed.mjs';
 import {STATUSES,localToday,transition,backup,parseBackup,validateJob} from './tracker.mjs';
 import {parseApplicationBatch,batchProgress} from './batch.mjs';
+import {dailyProgress} from './campaign.mjs';
 const assetBase=new URL('.',import.meta.url),$=id=>document.getElementById(id);
 let data={jobs:[]},onlySaved=false,current=null,clarity=null,records=Object.create(null),legacy={};
 let verifiedProfile=null,tailoredApplication=null;
@@ -35,7 +36,8 @@ function download(content,name,type='application/json'){const url=URL.createObje
 function listedJobs(){const all=new Map(data.jobs.map(j=>[j.id,j]));if(onlySaved)for(const r of Object.values(records))if(!all.has(r.job.id))all.set(r.job.id,{...r.job,stale:true,archived:true});return [...all.values()];}
 function render(){
  const progress=batchProgress(records,applicationTarget);
- $('batchProgress').textContent=`${progress.applied} applied / ${progress.target} target · ${progress.prepared} prepared · ${progress.approved} approved · ${progress.blocked} blocked · ${progress.unknown} need review · ${progress.remaining} applications remaining. Prepared and approved roles are not submissions.`;
+ const daily=dailyProgress(records,applicationTarget);
+ $('batchProgress').textContent=`${daily.applied} applied / ${daily.target} target today (${daily.date}) · ${daily.lifetime} lifetime submissions · ${progress.prepared} prepared · ${progress.approved} approved · ${progress.blocked} blocked · ${progress.unknown} need review · ${daily.remaining} applications remaining today. History is preserved when the daily counter resets. Prepared and approved roles are not submissions.`;
  const q=$('query').value.toLowerCase(),loc=$('location').value.toLowerCase(),limit=Number($('threshold').value),stage=$('stageFilter').value;
  const candidates=listedJobs().filter(j=>matchesQuery(j,q)&&matchesLocation(j,loc));
  const hiddenByFit=onlySaved?0:candidates.filter(j=>j.score<limit).length;
